@@ -56,7 +56,7 @@ def etl_pipeline(section, category, article_url, scraped_at, collection):
         return False
 
 
-def run_swarm(collection, json_data, max_workers=5):
+def run_swarm(collection, json_data, max_workers=3):
     """
     Flatten all sections → categories → articles into tasks
     and run the ETL pipeline in parallel, showing progress.
@@ -128,4 +128,4 @@ if __name__ == "__main__":
     collection = get_db_connection()
 
     # Run the parallel swarm
-    run_swarm(collection, json_data, max_workers=8)
+    run_swarm(collection, json_data, max_workers=3)
