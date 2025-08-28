@@ -1,0 +1,10 @@
+playwright
+beautifulsoup4
+botasaurus
+pymongo
+tqdm
+google-genai
+python-dotenv
+scikit-learn
+python-pptx
+wordcloud
