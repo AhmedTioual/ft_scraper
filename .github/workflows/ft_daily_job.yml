@@ -21,5 +21,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run daily scraper
+      - name: Install Playwright browsers
+        run: playwright install
+      
+      - name: Run daily job
         run: python -m ft_scraper.scheduler.daily_job
