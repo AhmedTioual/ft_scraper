@@ -1,7 +1,7 @@
 # FT Scraper
 
 **System Architecture:**  
-![System Architecture](data/metadata/system_architecture.png)
+![System Architecture](data/architecture/system_architecture.png)
 
 FT Scraper is a Python-based project for automated extraction, transformation, and presentation of web-based content.
 
