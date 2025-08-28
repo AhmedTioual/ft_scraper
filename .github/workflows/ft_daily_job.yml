@@ -1,0 +1,25 @@
+name: FT Scraper Daily Job
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # run daily at midnight UTC
+  workflow_dispatch:
+
+jobs:
+  daily-scraper:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run daily scraper
+        run: python -m ft_scraper.scheduler.daily_job
