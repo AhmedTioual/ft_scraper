@@ -12,7 +12,7 @@ FT Scraper is a Python-based project for automated extraction, transformation, a
 1. [Project Structure](#project-structure)  
 2. [Installation](#installation)  
 3. [Usage](#usage)  
-
+4. [Automation](#Automation)  
 ---
 
 ## Project Structure
@@ -51,3 +51,26 @@ playwright install
 
 ```bash
 python -m ft_scraper.scheduler.daily_job
+```
+
+## Automation
+
+1. Automate the scraper to run daily.
+
+### Local Cron Job
+
+Open your crontab editor:
+
+```bash
+crontab -e
+
+0 0 * * * /home/ahmed/anaconda3/bin/python3 -m ft_scraper.scheduler.daily_job >/dev/null 2>&1
+```
+
+2. Automate execution directly in GitHub using a GitHub GitHub Actions
+
+```bash
+mkdir -p .github/workflows
+touch .github/workflows/ft_daily_job.yml
+
+```
