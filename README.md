@@ -55,12 +55,8 @@ python -m ft_scraper.scheduler.daily_job
 
 ## Automation
 
-1. Automate the scraper to run daily.
-
-### Local Cron Job
-
-Open your crontab editor:
-
+1. Automate the scraper to run daily (Local Cron Job)
+   
 ```bash
 crontab -e
 
