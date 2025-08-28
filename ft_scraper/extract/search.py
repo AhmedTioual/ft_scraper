@@ -4,6 +4,8 @@ from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 import json
 
+from ft_scraper.load.db import is_article_in_db, get_db_connection,get_latest_published_at_by_category
+
 BASE_URL = "https://www.ft.com"
 
 
@@ -39,28 +41,10 @@ def get_leaf_articles(p, leaf_url):
     finally:
         browser.close()
 
-
-def get_new_articles(p, leaf_url, latest_db_date: str):
-    """
-    Scrape articles from a leaf URL and return only articles newer than latest_db_date.
-
-    Args:
-        p: Playwright object
-        leaf_url (str): The leaf page URL
-        latest_db_date (str): Latest published_at in DB (ISO format)
-
-    Returns:
-        List[]: 'href'
-    """
+def get_new_articles(p, collection, leaf_url):
     articles = []
     browser = p.chromium.launch(headless=True)
     page = browser.new_page()
-
-    # Convert DB date string to datetime for comparison
-    try:
-        latest_dt = datetime.fromisoformat(latest_db_date.replace("Z", "+00:00"))
-    except Exception:
-        latest_dt = None
 
     try:
         page.goto(leaf_url, timeout=60000, wait_until="networkidle")
@@ -72,33 +56,22 @@ def get_new_articles(p, leaf_url, latest_db_date: str):
             return []
 
         for li in site_content.find_all("li", class_="o-teaser-collection__item"):
-            time_tag = li.find("time")
             a_tag = li.find("a", class_="js-teaser-heading-link")
+            if not a_tag or not a_tag.has_attr("href"):
+                continue  # skip if no <a> or no href
 
-            if not time_tag or not time_tag.has_attr("datetime") or not a_tag or not a_tag.has_attr("href"):
-                continue
-
-            published_at = time_tag["datetime"]
             href = a_tag["href"]
             if not href.startswith("http"):
                 href = BASE_URL.rstrip("/") + href
 
-            # Compare article datetime with latest in DB
-            try:
-                article_dt = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
-            except Exception:
-                continue
-
-            if latest_dt and article_dt <= latest_dt:
-                # Stop loop: reached already stored articles
-                break
-
+            if is_article_in_db(collection, href):
+                continue  # skip already stored articles
             articles.append(href)
 
         return articles
 
     except Exception as e:
-        print(f"Error fetching articles: {e}")
+        # print(f"Error fetching articles: {e}")
         return []
 
     finally:
@@ -202,24 +175,27 @@ def update_sections():
         for future in as_completed(futures):
             section_name, leaf_sections = future.result()
             results["sections"][section_name] = leaf_sections
-            print(f"✅ Leaf Sections of {section_name}: {leaf_sections}")
+            print(f"Leaf Sections of {section_name}: {leaf_sections}")
 
     # Save JSON
     with open("data/metadata/ft_structure.json", "w", encoding="utf-8") as f:
         json.dump(results, f, indent=4, ensure_ascii=False)
 
-    print("📂 FT structure saved to data/metadata/ft_structure.json")
+    print("FT structure saved to data/metadata/ft_structure.json")
 
 # -----------------------------
 # Demo
 # -----------------------------
+
+'''
 if __name__ == "__main__":
-    
-    # Run crawler for structure
-    #update_sections()
 
     with sync_playwright() as p:
 
-        new_articles = get_new_articles(p=p, leaf_url="https://www.ft.com/global-economy", latest_db_date="2025-08-26T13:19:08.330Z")
+        collection=get_db_connection()
+
+        new_articles = get_new_articles(p=p, collection=collection, leaf_url="https://www.ft.com/middle-east-war")
 
         print(new_articles)
+
+'''

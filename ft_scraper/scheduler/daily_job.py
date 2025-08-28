@@ -55,8 +55,7 @@ def etl_pipeline(section, category, article_url, scraped_at, collection):
         print(f"Exception for article {article_url}: {e}")
         return False
 
-
-def run_swarm(collection, json_data, max_workers=3):
+def run_swarm(collection, json_data, max_workers=5):
     """
     Flatten all sections → categories → articles into tasks
     and run the ETL pipeline in parallel, showing progress.
@@ -68,22 +67,15 @@ def run_swarm(collection, json_data, max_workers=3):
         
         for section_name, urls in json_data["sections"].items():
             
-            for raw_url in urls:
-                
+            for raw_url in tqdm(urls, desc=f"Processing URLs ({section_name})"):
                 url = clean_url(url=raw_url)
                 category = urlparse(url).path.strip("/").split("/")[-1]
 
-                latest_db_date = get_latest_published_at_by_category(collection=collection,category=category)
+                articles = get_new_articles(p=p, collection=collection, leaf_url=url)
 
-                articles = get_new_articles(p=p,leaf_url=url,latest_db_date=latest_db_date) # get_leaf_articles(p, leaf_url=url)
-                
-                if articles : 
+                if articles:
                     for article_url in articles:
                         tasks.append((section_name, category, article_url))
-                else:
-                    pass
-                
-    # tasks = [('world', 'global-economy', 'https://www.ft.com/content/a228206a-a761-4947-a3cb-4913280e9cce'), ('world', 'global-economy', 'https://www.ft.com/content/b65767cb-0641-48b9-b57f-716a860c1faa'), ('world', 'global-economy', 'https://www.ft.com/content/920afd55-b993-4c5f-8bfa-26af161b04f0'), ('world', 'global-economy', 'https://www.ft.com/content/eb370ef6-1043-4a8a-8779-7a71834f751a'), ('world', 'global-economy', 'https://www.ft.com/content/488ee3c4-7545-4c2f-a42b-ae32dcc421a0')]
     
     total_tasks = len(tasks)
     print(f"Total articles to process: {total_tasks}")
@@ -128,4 +120,4 @@ if __name__ == "__main__":
     collection = get_db_connection()
 
     # Run the parallel swarm
-    run_swarm(collection, json_data, max_workers=3)
+    run_swarm(collection, json_data, max_workers=8)

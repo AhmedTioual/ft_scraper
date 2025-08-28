@@ -143,6 +143,20 @@ def get_recent_articles(collection):
         print(f"Error fetching articles: {e}")
         return None
 
+def is_article_in_db(collection,article_href):
+    """
+    Check if an article already exists in MongoDB by its article_id (href).
+
+    Args:
+        article_href (str): Article URL or ID to check
+
+    Returns:
+        bool: True if exists, False otherwise
+    """
+    # Search in MongoDB
+    result = collection.find_one({"article_id": article_href})
+    return result is not None
+
 def get_distinct_themes(collection):
     
     try:
