@@ -55,15 +55,19 @@ python -m ft_scraper.scheduler.daily_job
 
 ## Automation
 
-1. Automate the scraper to run daily (Local Cron Job)
-   
+1. Automate the scraper to run daily.
+
+### Local Cron Job
+
+Open your crontab editor:
+
 ```bash
 crontab -e
 
 0 0 * * * /home/ahmed/anaconda3/bin/python3 -m ft_scraper.scheduler.daily_job >/dev/null 2>&1
 ```
 
-2. Automate execution directly in GitHub using a GitHub Actions
+2. Automate execution directly in GitHub using a GitHub GitHub Actions
 
 ```bash
 mkdir -p .github/workflows

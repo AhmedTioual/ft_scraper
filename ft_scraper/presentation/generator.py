@@ -62,6 +62,27 @@ def choose_optimal_k(embeddings, k_min=2, k_max=10):
 
     return best_k
 
+def choose_optimal_k_elbow(embeddings, k_min=2, k_max=10):
+    max_k = min(k_max, len(embeddings))
+    inertias = []
+
+    # Run KMeans for each k
+    for k in range(k_min, max_k + 1):
+        kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+        kmeans.fit(embeddings)
+        inertias.append(kmeans.inertia_)
+
+    # Compute second derivative (curvature) of inertia curve
+    x = np.arange(k_min, max_k + 1)
+    y = np.array(inertias)
+    deltas = np.diff(y, 2)  # second differences
+
+    # The elbow is at the point with max curvature
+    elbow_idx = np.argmax(np.abs(deltas)) + 1  # +1 to align with k values
+    best_k = x[elbow_idx]
+
+    return best_k
+
 def summarize_theme(articles, model_client, max_tokens=300):
     """
     Summarize a list of articles belonging to the same theme into one collective theme summary.
@@ -248,7 +269,7 @@ def presentation_pipeline():
 
         # Step 4: Cluster Articles into Themes
 
-        num_themes = choose_optimal_k(embeddings=embeddings)
+        num_themes = choose_optimal_k_elbow(embeddings=embeddings)
         kmeans = KMeans(n_clusters=num_themes, random_state=42)
         labels = kmeans.fit_predict(embeddings)
 

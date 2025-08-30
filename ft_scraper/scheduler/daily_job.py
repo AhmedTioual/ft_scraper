@@ -55,28 +55,38 @@ def etl_pipeline(section, category, article_url, scraped_at, collection):
         print(f"Exception for article {article_url}: {e}")
         return False
 
-def run_swarm(collection, json_data, max_workers=5):
+def run_swarm(collection, json_data, max_workers=4):
+    
     """
     Flatten all sections → categories → articles into tasks
     and run the ETL pipeline in parallel, showing progress.
     """
-    tasks = []
 
-    # Flatten nested sections → categories → articles
-    with sync_playwright() as p:
+    def process_section(section_name, urls, collection):
+        local_tasks = []
         
-        for section_name, urls in json_data["sections"].items():
-            
-            for raw_url in tqdm(urls, desc=f"Processing URLs ({section_name})"):
+        with sync_playwright() as p:
+            for raw_url in tqdm(urls, desc=f"Processing {section_name}", leave=False):
                 url = clean_url(url=raw_url)
                 category = urlparse(url).path.strip("/").split("/")[-1]
-
                 articles = get_new_articles(p=p, collection=collection, leaf_url=url)
-
+                
                 if articles:
                     for article_url in articles:
-                        tasks.append((section_name, category, article_url))
+                        local_tasks.append((section_name, category, article_url))
+        
+        return local_tasks
+
+    tasks = []
     
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        futures = {
+            executor.submit(process_section, section_name, urls, collection): section_name
+            for section_name, urls in json_data["sections"].items()
+        }
+
+        for future in as_completed(futures):
+            tasks.extend(future.result())
     total_tasks = len(tasks)
     print(f"Total articles to process: {total_tasks}")
     
@@ -120,4 +130,4 @@ if __name__ == "__main__":
     collection = get_db_connection()
 
     # Run the parallel swarm
-    run_swarm(collection, json_data, max_workers=8)
+    run_swarm(collection, json_data, max_workers=4)
