@@ -454,5 +454,3 @@ with open("data/presentation_data/presentation_data.json", "r", encoding="utf-8"
 print(generate_presentation(presentation_data=presentation_data))
 
 '''
-
-print(presentation_pipeline())

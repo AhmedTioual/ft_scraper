@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
-from ft_scraper.extract.fetch import fetch_article_free, fetch_article_paywall, check_paywall
-from ft_scraper.load.db import get_db_connection, insert_article
+from src.extract.fetch import fetch_article_free, fetch_article_paywall, check_paywall
+from src.load.db import get_db_connection, insert_article
 from playwright.sync_api import sync_playwright
 import json
 
