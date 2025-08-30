@@ -1,4 +1,4 @@
-from ft_scraper.load.db import get_db_connection,get_recent_articles
+from src.load.db import get_db_connection,get_recent_articles
 from tqdm import tqdm
 import time
 from google import genai

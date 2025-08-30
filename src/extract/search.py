@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 import json
 
-from ft_scraper.load.db import is_article_in_db, get_db_connection,get_latest_published_at_by_category
+from src.load.db import is_article_in_db, get_db_connection,get_latest_published_at_by_category
 
 BASE_URL = "https://www.ft.com"
 

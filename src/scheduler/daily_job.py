@@ -5,11 +5,11 @@ from playwright.sync_api import sync_playwright
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 
-from ft_scraper.extract.fetch import fetch_article_free, fetch_article_paywall, check_paywall
-from ft_scraper.extract.search import update_sections, get_leaf_articles,get_new_articles
-from ft_scraper.transform.cleaner import get_article_content,clean_url
-from ft_scraper.load.db import insert_article, get_db_connection,get_latest_published_at_by_category
-from ft_scraper.presentation.generator import presentation_pipeline
+from src.extract.fetch import fetch_article_free, fetch_article_paywall, check_paywall
+from src.extract.search import update_sections, get_leaf_articles,get_new_articles
+from src.transform.cleaner import get_article_content,clean_url
+from src.load.db import insert_article, get_db_connection,get_latest_published_at_by_category
+from src.presentation.generator import presentation_pipeline
 
 def etl_pipeline(section, category, article_url, scraped_at, collection):
     """
