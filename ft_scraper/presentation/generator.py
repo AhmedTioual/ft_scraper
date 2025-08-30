@@ -12,6 +12,8 @@ import numpy as np
 
 from pptx import Presentation
 from pptx.util import Inches, Pt
+from pptx.enum.shapes import MSO_SHAPE
+from pptx.dml.color import RGBColor
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import io
@@ -104,11 +106,16 @@ def summarize_theme(articles, model_client, max_tokens=300):
             ]
         }}
 
+        Important: The "subtopics" array must contain **exactly 3 items** (no more, no less).
+
         Do NOT summarize each article separately. Only ONE integrated summary.
-        
+
         Articles:
+
         {combined_text}
+    
     """
+
     
     response = model_client.models.generate_content(
         model="gemini-2.0-flash",
@@ -130,21 +137,126 @@ def summarize_theme(articles, model_client, max_tokens=300):
     
     return result
 
-def generate_presentation(presentation_data, output_file=f'data/presentations/themes_presentation_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.pptx'):
+
+def generate_presentation(presentation_data):
+    
+    # Generate one datetime object
+    now = datetime.now()
+
+    # For filename (safe)
+    date_file = now.strftime("%Y-%m-%d")
+
+    # For display (with /)
+    date_display = now.strftime("%Y/%m/%d")
+
+    output_file = f"data/presentations/themes_presentation_{date_file}.pptx"
+
     prs = Presentation()
     prs.slide_width = Inches(16)
     prs.slide_height = Inches(9)
 
+     # Set background color for all slides
+    bg_color = RGBColor(255, 241, 229)  # #fff1e5
+
     print("Generate Custom Presentation ...")
 
+    # --- Add static first slide ---
+    first_slide_layout = prs.slide_layouts[6]  # blank slide
+    first_slide = prs.slides.add_slide(first_slide_layout)
+
+    # Set background color
+    fill = first_slide.background.fill
+    fill.solid()
+    fill.fore_color.rgb = bg_color
+
+    # Add Financial Times logo
+    logo_path = "data/images/ft_logo.png"  # update with your logo path
+    first_slide.shapes.add_picture(logo_path, Inches(4.12), Inches(3.84), height=Inches(0.86))
+
+    # Add vertical line
+    line = first_slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(5.04), Inches(3.76), Inches(0.05), Inches(0.96))
+    line.fill.solid()
+    line.fill.fore_color.rgb = RGBColor(0, 0, 0)
+    line.line.fill.background()  # remove border
+
+    # Add title
+    title_box = first_slide.shapes.add_textbox(Inches(5.21), Inches(3.34), Inches(6.75), Inches(0.68))
+    tf = title_box.text_frame
+    tf.word_wrap = True
+    tf.clear()
+
+    p = tf.add_paragraph()
+    run = p.add_run()
+    run.text = "Financial Times Summary"
+    run.font.bold = True
+    run.font.size = Pt(40)
+    run.font.name = "Times New Roman"  # serif font
+    p.alignment = 1  # center
+
+    # Add date
+    p = tf.add_paragraph()
+    run = p.add_run()
+    run.text = date_display
+    run.font.size = Pt(24)
+    run.font.name = "Times New Roman"  # serif font
+    p.alignment = 1  # center
+
     for theme in presentation_data:
-        slide_layout = prs.slide_layouts[5]  # Title only
+        
+        slide_layout = prs.slide_layouts[5] 
         slide = prs.slides.add_slide(slide_layout)
+
+        # Set background color
+        fill = slide.background.fill
+        fill.solid()
+        fill.fore_color.rgb = bg_color
+        
+        slide.shapes.add_picture(logo_path, Inches(0.50), Inches(0.18), height=Inches(0.30))
+
+        # Add vertical line
+        line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.85), Inches(0.18), Inches(0.03), Inches(0.30))
+        line.fill.solid()
+        line.fill.fore_color.rgb = RGBColor(0, 0, 0)
+        line.line.fill.background()  # remove border
+
+        # Add title
+        title_box = slide.shapes.add_textbox(Inches(0.92), Inches(-0.20), Inches(3.10), Inches(0.57))
+        tf = title_box.text_frame
+        tf.word_wrap = True
+        tf.clear()
+
+        p = tf.add_paragraph()
+        run = p.add_run()
+        run.text = "Financial Times Summary"
+        run.font.bold = True
+        run.font.size = Pt(16)
+        run.font.name = "Times New Roman"  # serif font
+        p.alignment = 1  # center
+
+        # Add date
+        p = tf.add_paragraph()
+        run = p.add_run()
+        run.text = date_display
+        run.font.size = Pt(8)
+        run.font.name = "Times New Roman"  # serif font
+        p.alignment = 1  # center
+
+        # Add horizontal line
+        line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE,  Inches(0.00), Inches(0.70), Inches(15.98), Inches(0.05))
+        line.fill.solid()
+        line.fill.fore_color.rgb = RGBColor(0, 0, 0)
+        line.line.fill.background()  # remove border
+
+        # Remove all default placeholders
+        for shape in slide.shapes:
+            if shape.is_placeholder:
+                sp = shape
+                slide.shapes._spTree.remove(sp._element)
 
         # --- Format summary JSON ---
         
         # Add summary box
-        left, top, width, height = Inches(0.5), Inches(0.5), Inches(15), Inches(3.5)
+        left, top, width, height = Inches(0.40), Inches(0.70), Inches(15), Inches(3.5)
         summary_box = slide.shapes.add_textbox(left, top, width, height)
         tf = summary_box.text_frame
         tf.word_wrap = True
@@ -155,38 +267,44 @@ def generate_presentation(presentation_data, output_file=f'data/presentations/th
         # Headline
         p = tf.add_paragraph()
         run = p.add_run()
-        run.text = "Headline: "
+        run.text = "Headline : "
         run.font.bold = True
-        run.font.size = Pt(14)
+        run.font.size = Pt(16)
+        run.font.name = "Times New Roman"
         run = p.add_run()
         run.text = summary_data["headline"]
-        run.font.size = Pt(14)
+        run.font.size = Pt(16)
+        run.font.name = "Times New Roman"
         p.space_after = Pt(12)   # <-- add spacing after headline
 
         # Main Idea
         p = tf.add_paragraph()
         run = p.add_run()
-        run.text = "Main Idea: "
+        run.text = "Main Idea : "
         run.font.bold = True
-        run.font.size = Pt(14)
+        run.font.size = Pt(16)
+        run.font.name = "Times New Roman"
         run = p.add_run()
         run.text = summary_data["main_idea"]
-        run.font.size = Pt(14)
+        run.font.size = Pt(16)
+        run.font.name = "Times New Roman"
         p.space_after = Pt(12)   # <-- spacing after main idea
 
         # Subtopics
         p = tf.add_paragraph()
         run = p.add_run()
-        run.text = "Subtopics:"
+        run.text = "Subtopics :"
         run.font.bold = True
-        run.font.size = Pt(14)
+        run.font.size = Pt(16)
+        run.font.name = "Times New Roman"
         p.space_after = Pt(6)    # <-- small spacing before bullets
 
         for sub in summary_data.get("subtopics", []):
             p = tf.add_paragraph()
             p.text = f"- {sub}"
             p.level = 1
-            p.font.size = Pt(14)
+            p.font.size = Pt(16)
+            p.font.name = "Times New Roman"
             p.space_after = Pt(6)  # space between bullet points
 
         # Word cloud
@@ -202,11 +320,17 @@ def generate_presentation(presentation_data, output_file=f'data/presentations/th
         plt.close()
         img_buf.seek(0)
 
-        left, top = Inches(0.50), Inches(3.60)
-        slide.shapes.add_picture(img_buf, left, top, width=Inches(5), height=Inches(3.32))
+        left, top = Inches(5.93), Inches(4.20)
+        pic = slide.shapes.add_picture(
+            img_buf, left, top, width=Inches(4.52), height=Inches(3.00)
+        )
 
+        # Add a line border (outline)
+        pic.line.color.rgb = RGBColor(0, 0, 0)   # black border
+        pic.line.width = Pt(2)                   # 2-point thickness
+        
         # References
-        left, top, width, height = Inches(0.5), Inches(7.20), Inches(15), Inches(2.0)
+        left, top, width, height = Inches(0.40), Inches(7.20), Inches(15), Inches(2.0)
         ref_box = slide.shapes.add_textbox(left, top, width, height)
         tf = ref_box.text_frame
         tf.word_wrap = True
@@ -215,23 +339,26 @@ def generate_presentation(presentation_data, output_file=f'data/presentations/th
         # "References:" bold
         p = tf.add_paragraph()
         run = p.add_run()
-        run.text = "References:"
+        run.text = "References :"
         run.font.bold = True
-        run.font.size = Pt(14)
+        run.font.size = Pt(16)
+        run.font.name = "Times New Roman"
 
         for art in theme["articles"][:3]:
             p = tf.add_paragraph()
             
             # Headline normal
             run = p.add_run()
-            run.text = f"- {art['headline']} : "
-            run.font.size = Pt(14)
-            
+            run.text = f"- {art['headline'][:40]}... : "
+            run.font.size = Pt(16)
+            run.font.name = "Times New Roman"
+
             # Article ID italic
             run = p.add_run()
             run.text = art["article_id"]
             run.font.italic = True
-            run.font.size = Pt(14)
+            run.font.size = Pt(16)
+            run.font.name = "Times New Roman"
 
             p.level = 1
 
@@ -307,7 +434,7 @@ def presentation_pipeline():
                 "summary": summary,
                 "articles": themes[theme_id]  # include headlines or ids for reference
             })
-
+            
         # Step 8: Generate Presentation
 
         path = generate_presentation(presentation_data=presentation_data)
@@ -317,3 +444,15 @@ def presentation_pipeline():
     except Exception as ex:
 
         return False,ex
+
+'''
+
+# Load
+with open("data/presentation_data/presentation_data.json", "r", encoding="utf-8") as f:
+    presentation_data = json.load(f)
+
+print(generate_presentation(presentation_data=presentation_data))
+
+'''
+
+print(presentation_pipeline())

@@ -55,14 +55,7 @@ def etl_pipeline(section, category, article_url, scraped_at, collection):
         print(f"Exception for article {article_url}: {e}")
         return False
 
-def run_swarm(collection, json_data, max_workers=4):
-    
-    """
-    Flatten all sections → categories → articles into tasks
-    and run the ETL pipeline in parallel, showing progress.
-    """
-
-    def process_section(section_name, urls, collection):
+def process_section(section_name, urls, collection):
         local_tasks = []
         
         with sync_playwright() as p:
@@ -76,6 +69,13 @@ def run_swarm(collection, json_data, max_workers=4):
                         local_tasks.append((section_name, category, article_url))
         
         return local_tasks
+
+def run_swarm(collection, json_data, max_workers=4):
+    
+    """
+    Flatten all sections → categories → articles into tasks
+    and run the ETL pipeline in parallel, showing progress.
+    """
 
     tasks = []
     
