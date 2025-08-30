@@ -28,7 +28,7 @@ jobs:
         run: playwright install
 
       - name: Run daily job
-        run: python -m ft_scraper.scheduler.daily_job
+        run: python -m src.scheduler.daily_job
 
       - name: Commit and push generated presentation
         run: |
