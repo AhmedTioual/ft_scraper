@@ -1,8 +1,4 @@
-from bs4 import BeautifulSoup
-from src.extract.fetch import fetch_article_free, fetch_article_paywall, check_paywall
-from src.load.db import get_db_connection, insert_article
-from playwright.sync_api import sync_playwright
-import json
+from lxml import html
 
 def extract_text_or_none(tag, selector=None, attr=None):
     """
@@ -13,7 +9,6 @@ def extract_text_or_none(tag, selector=None, attr=None):
     if attr and tag.has_attr(attr):
         return tag[attr]
     return tag.get_text(" ", strip=True) if tag else None
-
 
 def extract_figures(soup):
     """
@@ -40,7 +35,6 @@ def extract_figures(soup):
         })
     return figures
 
-
 def extract_paragraphs(article_tag):
     """
     Extract all <p> tags text inside the <article>.
@@ -53,7 +47,6 @@ def extract_paragraphs(article_tag):
         if text:
             paragraphs.append(text)
     return paragraphs
-
 
 def get_article_content(article_id, scraped_at, paywall, section,category, soup):
     """
@@ -97,6 +90,96 @@ def get_article_content(article_id, scraped_at, paywall, section,category, soup)
         "media": {
             "images": figures,
             "videos": None  
+        }
+    }
+
+    return data
+
+def get_article_content_archive(article_id, scraped_at, paywall, section, category, soup):
+    """
+    Extract structured article content from 'archive' site using XPath.
+    """
+
+    # Convert BeautifulSoup to lxml tree for XPath queries
+    parser = html.HTMLParser(encoding="utf-8")
+    tree = html.fromstring(str(soup), parser=parser)
+
+    def text_or_none(xpath_expr, attr=None):
+        try:
+            el = tree.xpath(xpath_expr)
+            if not el:
+                return None
+            el = el[0]
+            if attr:
+                return el.get(attr)
+            return el.text_content().strip()
+        except Exception:
+            return None
+
+    # --- Metadata fields ---
+    topper_primary_theme = text_or_none("//div[@id='o-topper']//span/a")
+    topper_headline = text_or_none("//div[@id='o-topper']//h1/span[1]")
+    standfirst = text_or_none("//div[@id='o-topper']//div[2]")
+    byline_text = text_or_none("//article[@id='site-content']//div[3]/div[1]/div[1]")
+    pub_datetime = text_or_none("//article[@id='site-content']//div[3]/div[1]/div[2]/div[1]/div[1]/time", attr="datetime")
+    updated_datetime = text_or_none("//article[@id='site-content']//div[3]/div[1]/div[2]/div[1]/div[2]/time", attr="datetime")
+
+    # --- Content ---
+    article_nodes = tree.xpath('//*[@id="article-body"]')
+    paragraphs = []
+    figures_list = []
+
+    if article_nodes:
+        article = article_nodes[0]
+
+        # Paragraphs: all <div> children inside article-body
+        paragraphs = [
+            p.text_content().strip()
+            for p in article.xpath(".//div")
+            if p.text_content().strip()
+        ]
+
+        # Figures: list of dicts with img_src, caption, credit
+        figures = article.xpath(".//figure")
+        for fig in figures:
+            # Image src
+            img = fig.xpath(".//img[@currentsourceurl]")
+            img_src = img[0].get("currentsourceurl") if img else None
+
+            # Caption text
+            figcaption = fig.xpath(".//figcaption")
+            caption = figcaption[0].text_content().strip() if figcaption else None
+
+            # Credit (optional)
+            credit_span = fig.xpath(".//span[contains(text(),'©') or contains(@class,'credit')]")
+            credit = credit_span[0].text_content().strip() if credit_span else None
+
+            if img_src:
+                figures_list.append({
+                    "img_src": img_src,
+                    "caption": caption,
+                    "credit": credit
+                })
+
+    # --- Final structured data ---
+    data = {
+        "article_id": article_id,
+        "scraped_at": scraped_at,
+        "paywall": paywall,
+        "section": section,
+        "category": category,
+
+        "topper__primary_theme": topper_primary_theme,
+        "topper__headline": topper_headline,
+        "standfirst": standfirst,
+        "byline": byline_text,
+        "published_at": pub_datetime,
+        "updated_at": updated_datetime,
+
+        "content": paragraphs,
+        "media": {
+            "images": figures_list,
+            "videos": []  # adjust later if video tags exist
         }
     }
 

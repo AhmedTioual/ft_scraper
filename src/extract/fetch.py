@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
-
+from src.transform.cleaner import get_article_content,get_article_content_archive
 
 def check_paywall(page, article_url):
     """
@@ -53,6 +53,7 @@ def fetch_article_paywall(page, article_url):
     # --- Primary attempt ---
     #browser = p.chromium.launch(headless=True)
     #page = browser.new_page()
+
     try:
         url = options[0] + article_url
         print("Trying primary bypass:", url)
@@ -61,7 +62,7 @@ def fetch_article_paywall(page, article_url):
         page.wait_for_selector("div.article-content", timeout=10000)
 
         html = page.locator("div.article-content").evaluate("el => el.outerHTML")
-        return BeautifulSoup(html, "html.parser")
+        return BeautifulSoup(html, "html.parser"),1
 
     except Exception:
         print("Primary failed, trying archive...")
@@ -79,14 +80,14 @@ def fetch_article_paywall(page, article_url):
         page.goto(url, timeout=60000)
         page.wait_for_selector(
             'xpath=/html/body/center/div[4]/div/div[1]/div/div/div[1]/div[2]/div/div/div[3]',
-            timeout=10000
+            timeout=30000
         )
 
         html = page.locator(
             'xpath=/html/body/center/div[4]/div/div[1]/div/div/div[1]/div[2]/div/div/div[3]'
         ).evaluate("el => el.outerHTML")
 
-        return BeautifulSoup(html, "html.parser")
+        return BeautifulSoup(html, "html.parser"),2
 
     except Exception as ex:
         print("Archive failed:", ex)
@@ -95,23 +96,29 @@ def fetch_article_paywall(page, article_url):
     finally:
         pass #browser.close()
 
-"""
-
 if __name__ == "__main__":
     
     with sync_playwright() as p:
-        article_url = "https://www.ft.com/content/67aebda9-b86d-4be9-a1e1-1df262d745f0"
+        article_url = "https://www.ft.com/content/db7251da-137d-43eb-a9c9-a27221ad2716"
+        
+        browser = p.chromium.launch(
+            headless=True,
+            args=["--disable-blink-features=AutomationControlled"]
+        )
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            viewport={"width": 1280, "height": 800}
+        )
+        page = context.new_page()
 
-        if check_paywall(p, article_url):
-            soup = fetch_article_paywall(p, article_url)
-        else:
-            soup = fetch_article_free(p, article_url)
+        soup = fetch_article_paywall(page=page,article_url=article_url)
 
-        if soup:
-            print("Article fetched successfully")
-            print(soup)
-        else:
-            print("Failed to fetch article")
-            print(soup)
-
-"""
+        print(get_article_content_archive(
+            article_id=article_url,
+            scraped_at="date",
+            paywall=True,
+            section="Art",
+            category="Art",
+            soup=soup
+        ))

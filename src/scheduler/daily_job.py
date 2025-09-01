@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from src.extract.fetch import fetch_article_free, fetch_article_paywall, check_paywall
 from src.extract.search import update_sections, get_leaf_articles,get_new_articles
-from src.transform.cleaner import get_article_content,clean_url
+from src.transform.cleaner import get_article_content,get_article_content_archive,clean_url
 from src.load.db import insert_article, get_db_connection,get_latest_published_at_by_category
 from src.presentation.generator import presentation_pipeline
 
@@ -18,12 +18,23 @@ def etl_pipeline(section, category, article_url, scraped_at, collection):
     """
     try:
         with sync_playwright() as p:  # each thread gets its own Playwright
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
-
+            
+            browser = p.chromium.launch(
+            headless=True,
+            args=["--disable-blink-features=AutomationControlled"]
+            )
+            
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                viewport={"width": 1280, "height": 800}
+            )
+            
+            page = context.new_page()
+            
             # --- Extract ---
             paywall_status = check_paywall(page, article_url)
-            soup = fetch_article_paywall(page, article_url) if paywall_status else fetch_article_free(page, article_url)
+            soup,opt = fetch_article_paywall(page, article_url) if paywall_status else fetch_article_free(page, article_url)
 
             if not soup:
                 print(f"Failed to fetch article: {article_url}")
@@ -33,14 +44,25 @@ def etl_pipeline(section, category, article_url, scraped_at, collection):
             print(f"Article fetched: {article_url}")
 
             # --- Transform ---
-            article = get_article_content(
-                article_id=article_url,
-                scraped_at=scraped_at,
-                paywall=paywall_status,
-                section=section,
-                category=category,
-                soup=soup
-            )
+            
+            if opt == 1 :
+                article = get_article_content(
+                    article_id=article_url,
+                    scraped_at=scraped_at,
+                    paywall=paywall_status,
+                    section=section,
+                    category=category,
+                    soup=soup
+                )
+            else :
+                article = get_article_content_archive(
+                    article_id=article_url,
+                    scraped_at=scraped_at,
+                    paywall=paywall_status,
+                    section=section,
+                    category=category,
+                    soup=soup
+                )
 
             # --- Load ---
             if article:
