@@ -1,4 +1,5 @@
 from lxml import html
+import re
 
 def extract_text_or_none(tag, selector=None, attr=None):
     """
@@ -192,3 +193,17 @@ def clean_url(url: str) -> str:
         url = "http" + parts[-1]  # take last segment
     
     return url.strip()
+
+def clean_article_url(url: str) -> str:
+    """
+    Clean FT article URL by removing trailing colons or invalid characters 
+    in the last path segment.
+    """
+    # Remove trailing colon from URL if present
+    url = url.rstrip(':')
+
+    # Ensure the last segment (after the last "/") only keeps valid UUID-like pattern
+    url_parts = url.split('/')
+    if url_parts[-1]:
+        url_parts[-1] = re.sub(r'[^a-zA-Z0-9-]', '', url_parts[-1])
+    return '/'.join(url_parts)

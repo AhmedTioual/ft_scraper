@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from src.extract.fetch import fetch_article_free, fetch_article_paywall, check_paywall
 from src.extract.search import update_sections, get_leaf_articles,get_new_articles
-from src.transform.cleaner import get_article_content,get_article_content_archive,clean_url
+from src.transform.cleaner import get_article_content,get_article_content_archive,clean_url,clean_article_url
 from src.load.db import insert_article, get_db_connection,get_latest_published_at_by_category
 from src.presentation.generator import presentation_pipeline
 
@@ -82,9 +82,13 @@ def process_section(section_name, urls, collection):
         
         with sync_playwright() as p:
             for raw_url in tqdm(urls, desc=f"Processing {section_name}", leave=False):
+                
                 url = clean_url(url=raw_url)
+                
                 category = urlparse(url).path.strip("/").split("/")[-1]
+                
                 articles = get_new_articles(p=p, collection=collection, leaf_url=url)
+                articles = [clean_article_url(a) for a in articles]
                 
                 if articles:
                     for article_url in articles:
