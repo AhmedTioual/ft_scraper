@@ -63,7 +63,7 @@ crontab -e
 0 0 * * * /home/ahmed/anaconda3/bin/python3 -m src.scheduler.daily_job >/dev/null 2>&1
 ```
 
-2. Automate execution directly in GitHub using a GitHub GitHub Actions
+2. Automate execution directly in GitHub using a GitHub Actions
 
 ```bash
 mkdir -p .github/workflows
